@@ -399,23 +399,6 @@ static void draw_vertices(const Vtx_t **v, int count) {
     }
 }
 
-static uint32_t sqrt_fixed(uint32_t x) {
-    // Calculate the square root of a 16-bit fractional fixed point number
-    uint32_t r = x;
-    uint32_t b = 0x40000000;
-    uint32_t q = 0;
-    while (b > 0x40) {
-        uint32_t t = q + b;
-        if (r >= t) {
-            r -= t;
-            q = t + b;
-        }
-        r <<= 1;
-        b >>= 1;
-    }
-    return q >> 8;
-}
-
 static void g_vtx(Gwords *words) {
     const uint8_t count = ((words->w0 >> 12) & 0xFF);
     const uint8_t index = ((words->w0 >>  0) & 0xFF) >> 1;
@@ -440,7 +423,7 @@ static void g_vtx(Gwords *words) {
                 // Normalize the result
                 int s = (lights[i].nx * lights[i].nx + lights[i].ny * lights[i].ny + lights[i].nz * lights[i].nz) >> 8;
                 if (s > 0) {
-                    s = sqrt_fixed(s);
+                    s = sqrt64((s64)s << 16);
                     lights[i].nx = (lights[i].nx << 16) / s;
                     lights[i].ny = (lights[i].ny << 16) / s;
                     lights[i].nz = (lights[i].nz << 16) / s;
