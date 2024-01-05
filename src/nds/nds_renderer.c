@@ -5,6 +5,10 @@
 #include <nds/arm9/postest.h>
 
 #include "nds_renderer.h"
+#include "c_button.h"
+#include "stick.h"
+#include "stick_base_1.h"
+#include "stick_base_2.h"
 
 struct Color {
     uint8_t r, g, b, a;
@@ -32,9 +36,9 @@ static Vtx vertex_buffer[16];
 static struct Texture texture_map[2048];
 static struct Light lights[5];
 
-uint16_t texture_fifo[2048];
-uint16_t texture_fifo_start;
-uint16_t texture_fifo_end;
+static uint16_t texture_fifo[2048];
+static uint16_t texture_fifo_start;
+static uint16_t texture_fifo_end;
 
 static uint8_t *texture_address;
 static uint8_t texture_format;
@@ -77,8 +81,9 @@ static uint16_t fog_max;
 static int no_texture;
 static int frame_count;
 
-struct
-{
+struct Sprite sprites[MAX_SPRITES];
+
+struct {
     const void *texture;
     gl_texture_data *tex;
 } glTexQueue[128];
@@ -1012,19 +1017,40 @@ static void execute(Gfx* cmd) {
     }
 }
 
-static void count_frames() {
+static void end_frame() {
     // Count a frame (triggered at V-blank)
     frame_count++;
 
-    // Update texture VRAM for the next frame
-    if (glTexCount > 0)
-        glTexSync();
+    // Update VRAM and OAM for the next frame
+    if (glTexCount > 0) glTexSync();
+    oamUpdate(&oamSub);
+}
+
+static uint16_t *bitmap_init(const uint32_t *bitmap, uint32_t length) {
+    // Copy an object bitmap into VRAM and return a pointer to the data
+    uint16_t *gfx = oamAllocateGfx(&oamSub, SpriteSize_64x64, SpriteColorFormat_Bmp);
+    if (gfx) dmaCopy(bitmap, gfx, length);
+    return gfx;
+}
+
+static uint16_t *bitmap_init_press(const uint32_t *bitmap, uint32_t length) {
+    // Reduce bitmap brightness to create a pressed variant
+    uint16_t *src = (uint16_t*)bitmap;
+    static uint16_t dst[SpriteSize_64x64 / 2];
+    for (int i = 0; i < length / 2; i++)
+    {
+        uint8_t r = ((src[i] >> 10) & 0x1F) * 3 / 4;
+        uint8_t g = ((src[i] >> 5) & 0x1F) * 3 / 4;
+        uint8_t b = ((src[i] >> 0) & 0x1F) * 3 / 4;
+        dst[i] = (src[i] & BIT(15)) | (r << 10) | (g << 5) | b;
+    }
+    return bitmap_init((uint32_t*)dst, length);
 }
 
 void renderer_init() {
     // Set up the screens
     videoSetMode(MODE_0_3D);
-    consoleDemoInit();
+    videoSetModeSub(MODE_0_2D);
 
     // Initialize the 3D renderer
     glInit();
@@ -1034,10 +1060,15 @@ void renderer_init() {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
 
-    // Set up texture VRAM (bank C is used by the console)
+    // Initialize touch screen background and objects
+    BG_PALETTE[0x200] = ARGB16(1, 15, 16, 17);
+    oamInit(&oamSub, SpriteMapping_Bmp_1D_128, false);
+
+    // Set up VRAM for textures and objects
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
-    vramSetBankD(VRAM_D_TEXTURE);
+    vramSetBankC(VRAM_C_TEXTURE);
+    vramSetBankD(VRAM_D_SUB_SPRITE);
     vramSetBankE(VRAM_E_TEX_PALETTE);
 
     // Generate an empty texture for when no texture should be used
@@ -1053,9 +1084,65 @@ void renderer_init() {
     }
     glColorTableEXT(GL_TEXTURE_2D, 0, 8, 0, 0, palette);
 
-    // Set up the frame counter to trigger on V-blank
-    irqSet(IRQ_VBLANK, count_frames);
+    // Set up a frame event that triggers on V-blank
+    irqSet(IRQ_VBLANK, end_frame);
     irqEnable(IRQ_VBLANK);
+
+    // Initialize graphics for touch screen objects
+    uint16_t *c_press = bitmap_init_press(c_buttonBitmap, c_buttonBitmapLen);
+    uint16_t *c_release = bitmap_init(c_buttonBitmap, c_buttonBitmapLen);
+    uint16_t *stick = bitmap_init(stickBitmap, stickBitmapLen);
+    uint16_t *stick_base_1 = bitmap_init(stick_base_1Bitmap, stick_base_1BitmapLen);
+    uint16_t *stick_base_2 = bitmap_init(stick_base_2Bitmap, stick_base_2BitmapLen);
+
+    // Initialize the C-left object
+    sprites[C_LEFT].gfx_press = c_press;
+    sprites[C_LEFT].gfx_release = c_release;
+    sprites[C_LEFT].x = 0;
+    sprites[C_LEFT].y = 128;
+    sprites[C_LEFT].vflip = false;
+
+    // Initialize the C-right object
+    sprites[C_RIGHT].gfx_press = c_press;
+    sprites[C_RIGHT].gfx_release = c_release;
+    sprites[C_RIGHT].x = 192;
+    sprites[C_RIGHT].y = 128;
+    sprites[C_RIGHT].vflip = true;
+
+    // Initialize the stick object
+    sprites[STICK].gfx_press = stick;
+    sprites[STICK].gfx_release = stick;
+    sprites[STICK].x = 96;
+    sprites[STICK].y = 64;
+    sprites[STICK].vflip = false;
+
+    // Initialize the first stick base object
+    sprites[STICK_BASE_1].gfx_press = stick_base_1;
+    sprites[STICK_BASE_1].gfx_release = stick_base_1;
+    sprites[STICK_BASE_1].x = 64;
+    sprites[STICK_BASE_1].y = 32;
+    sprites[STICK_BASE_1].vflip = false;
+
+    // Initialize the second stick base object
+    sprites[STICK_BASE_2].gfx_press = stick_base_2;
+    sprites[STICK_BASE_2].gfx_release = stick_base_2;
+    sprites[STICK_BASE_2].x = 64;
+    sprites[STICK_BASE_2].y = 96;
+    sprites[STICK_BASE_2].vflip = false;
+
+    // Initialize the third stick base object
+    sprites[STICK_BASE_3].gfx_press = stick_base_1;
+    sprites[STICK_BASE_3].gfx_release = stick_base_1;
+    sprites[STICK_BASE_3].x = 128;
+    sprites[STICK_BASE_3].y = 32;
+    sprites[STICK_BASE_3].vflip = true;
+
+    // Initialize the fourth stick base object
+    sprites[STICK_BASE_4].gfx_press = stick_base_2;
+    sprites[STICK_BASE_4].gfx_release = stick_base_2;
+    sprites[STICK_BASE_4].x = 128;
+    sprites[STICK_BASE_4].y = 96;
+    sprites[STICK_BASE_4].vflip = true;
 }
 
 void draw_frame(Gfx *display_list) {
@@ -1069,8 +1156,7 @@ void draw_frame(Gfx *display_list) {
     glFlush(GL_TRANS_MANUALSORT);
 
     // Configure fog based on the frame parameters
-    if (fog_status)
-    {
+    if (fog_status) {
         // Calculate the largest fog shift that still covers the fog distance
         int shift = 0;
         for (int i = 500; i >= fog_max - fog_min; i >>= 1)
@@ -1092,16 +1178,19 @@ void draw_frame(Gfx *display_list) {
         glFogOffset((fog_min * 0x7FFF / 1000) - (0x400 >> shift));
         glFogColor(fog_color.r >> 3, fog_color.g >> 3, fog_color.b >> 3, fog_color.a >> 3);
         glEnable(GL_FOG);
-    }
-    else
-    {
+    } else {
         glDisable(GL_FOG);
     }
 
+    // Update touch screen objects
+    oamClear(&oamSub, 0, 0);
+    for (int i = 0; i < MAX_SPRITES; i++)
+        oamSet(&oamSub, i, sprites[i].x, sprites[i].y, 1, 1, SpriteSize_64x64, SpriteColorFormat_Bmp, sprites[i].pressed
+            ? sprites[i].gfx_press : sprites[i].gfx_release, -1, false, false, sprites[i].vflip, false, false);
+
     // Limit to 30FPS by waiting for up to 2 frames, depending on how long it took the current frame to render
-    for (int i = frame_count; i < 2; i++) {
+    for (int i = frame_count; i < 2; i++)
         swiWaitForVBlank();
-    }
 
     // Reset the frame counter
     frame_count = 0;

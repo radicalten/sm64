@@ -185,7 +185,8 @@ TOOLS_DIR := tools
 # in the makefile that we want should cover assets.)
 
 PYTHON := python3
-SOX    := sox
+SOX := sox
+GRIT := grit
 
 ifeq ($(filter clean distclean print-%,$(MAKECMDGOALS)),)
 
@@ -243,6 +244,7 @@ ULTRA_BIN_DIRS := lib/bin
 ifeq ($(TARGET_NDS),1)
   SRC_DIRS += src/nds
   ARM7_SRC_DIRS := src/nds/arm7
+  GFX_DIRS := src/nds/gfx
 else
   SRC_DIRS += asm
   ULTRA_SRC_DIRS += lib/asm
@@ -278,6 +280,9 @@ ifeq ($(TARGET_NDS),1)
 
   ARM7_C_FILES := $(foreach dir,$(ARM7_SRC_DIRS),$(wildcard $(dir)/*.c))
   ARM7_O_FILES := $(foreach file,$(ARM7_C_FILES),$(BUILD_DIR)/arm7/$(file:.c=.o))
+
+  PNG_FILES := $(foreach dir,$(GFX_DIRS),$(wildcard $(dir)/*.png))
+  GFX_O_FILES := $(foreach file,$(PNG_FILES),$(BUILD_DIR)/gfx/$(file:.png=.o))
 endif
 
 # Sound files
@@ -382,7 +387,9 @@ ifeq ($(TARGET_N64),1)
 endif
 
 INCLUDE_DIRS := include $(BUILD_DIR) $(BUILD_DIR)/include src .
-ifeq ($(TARGET_N64),1)
+ifeq ($(TARGET_NDS),1)
+  INCLUDE_DIRS += $(addprefix $(BUILD_DIR)/gfx/,$(GFX_DIRS))
+else
   INCLUDE_DIRS += include/libc
 endif
 
@@ -561,7 +568,7 @@ endif
 ALL_DIRS := $(BUILD_DIR) $(addprefix $(BUILD_DIR)/,$(SRC_DIRS) $(GODDARD_SRC_DIRS) $(ULTRA_SRC_DIRS) $(ULTRA_BIN_DIRS) $(BIN_DIRS) $(TEXTURE_DIRS) $(TEXT_DIRS) $(SOUND_SAMPLE_DIRS) $(addprefix levels/,$(LEVEL_DIRS)) rsp include) $(MIO0_DIR) $(addprefix $(MIO0_DIR)/,$(VERSION)) $(SOUND_BIN_DIR) $(SOUND_BIN_DIR)/sequences/$(VERSION)
 
 ifeq ($(TARGET_NDS),1)
-  ALL_DIRS += $(addprefix $(BUILD_DIR)/arm7/,$(ARM7_SRC_DIRS))
+  ALL_DIRS += $(addprefix $(BUILD_DIR)/arm7/,$(ARM7_SRC_DIRS)) $(addprefix $(BUILD_DIR)/gfx/,$(GFX_DIRS))
 endif
 
 # Make sure build directory exists before compiling anything
@@ -770,6 +777,13 @@ $(BUILD_DIR)/arm7/%.o: %.c
 	$(call print,Compiling:,$<,$@)
 	@$(CC_CHECK) $(ARM7_CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/arm7/$*.d $<
 	$(V)$(CC) -c $(ARM7_CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/gfx/%.s: %.png %.grit
+	$(GRIT) $< -fts -o$(BUILD_DIR)/gfx/$*
+
+$(BUILD_DIR)/gfx/%.o: $(BUILD_DIR)/gfx/%.s
+	$(call print,Assembling:,$<,$@)
+	$(V)$(CPP) $(CPPFLAGS) $< | $(AS) $(ASFLAGS) -MD $(BUILD_DIR)/gfx/$*.d -o $@
 endif
 
 # Alternate compiler flags needed for matching
@@ -844,9 +858,9 @@ $(ARM7): $(ARM7_O_FILES)
 	@$(PRINT) "$(GREEN)Linking ARM7 binary:  $(BLUE)$@ $(NO_COL)\n"
 	$(V)$(LD) -L $(BUILD_DIR) -o $@ $(ARM7_O_FILES) $(ARM7_LDFLAGS)
 
-$(ARM9): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
+$(ARM9): $(GFX_O_FILES) $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
 	@$(PRINT) "$(GREEN)Linking ARM9 binary:  $(BLUE)$@ $(NO_COL)\n"
-	$(V)$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
+	$(V)$(LD) -L $(BUILD_DIR) -o $@ $(GFX_O_FILES) $(O_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
 
 $(ROM): $(ARM7) $(ARM9)
 	@$(PRINT) "$(GREEN)Building ROM: $(BLUE)$@ $(NO_COL)\n"
