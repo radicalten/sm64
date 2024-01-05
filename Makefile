@@ -408,7 +408,7 @@ endif
 ifeq ($(TARGET_NDS),1)
 
 LIBDIRS := $(DEVKITPRO)/libnds
-TARGET_CFLAGS := -march=armv5te -mtune=arm946e-s $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM9 -D_LANGUAGE_C -DNO_SEGMENTED_MEMORY -DLIBFAT
+TARGET_CFLAGS := -march=armv5te -mtune=arm946e-s $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM9 -D_LANGUAGE_C -DNO_SEGMENTED_MEMORY #-DENABLE_FPS
 ARM7_TARGET_CFLAGS := -mcpu=arm7tdmi -mtune=arm7tdmi $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM7
 
 CC_CHECK := $(CC)

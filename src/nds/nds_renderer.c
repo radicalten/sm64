@@ -1035,6 +1035,11 @@ void renderer_init() {
     videoSetMode(MODE_0_3D);
     videoSetModeSub(MODE_0_2D);
 
+#ifdef ENABLE_FPS
+    // Initialize the console for printing FPS
+    consoleDemoInit();
+#endif
+
     // Initialize the 3D renderer
     glInit();
     glClearColor(0, 0, 0, 31);
@@ -1046,11 +1051,14 @@ void renderer_init() {
     // Initialize touch screen background and objects
     BG_PALETTE[0x200] = ARGB16(1, 15, 16, 17);
     oamInit(&oamSub, SpriteMapping_Bmp_1D_128, false);
+    oamClear(&oamSub, 0, 0);
 
     // Set up VRAM for textures and objects
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
+#ifndef ENABLE_FPS
     vramSetBankC(VRAM_C_TEXTURE);
+#endif
     vramSetBankD(VRAM_D_SUB_SPRITE);
     vramSetBankE(VRAM_E_TEX_PALETTE);
 
@@ -1166,7 +1174,6 @@ void draw_frame(Gfx *display_list) {
     }
 
     // Update touch screen objects
-    oamClear(&oamSub, 0, 0);
     for (int i = 0; i < MAX_SPRITES; i++)
         oamSet(&oamSub, i, sprites[i].x, sprites[i].y, 1, 1, SpriteSize_64x64, SpriteColorFormat_Bmp, sprites[i].pressed
             ? sprites[i].gfx_press : sprites[i].gfx_release, -1, false, false, sprites[i].vflip, false, false);
