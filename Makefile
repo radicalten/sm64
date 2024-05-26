@@ -198,7 +198,7 @@ TOOLS_DIR := tools
 
 PYTHON := python3
 SOX := sox
-GRIT := grit
+GRIT := $(DEVKITPRO)/tools/bin/grit
 
 ifeq ($(filter clean distclean print-%,$(MAKECMDGOALS)),)
 
@@ -335,8 +335,11 @@ SOUND_SEQUENCE_FILES := \
 
 # Object files
 O_FILES := $(foreach file,$(C_FILES),$(BUILD_DIR)/$(file:.c=.o)) \
-           $(foreach file,$(S_FILES),$(BUILD_DIR)/$(file:.s=.o)) \
            $(foreach file,$(GENERATED_C_FILES),$(file:.c=.o))
+
+ifneq ($(TARGET_NDS),1)
+  O_FILES += $(foreach file,$(S_FILES),$(BUILD_DIR)/$(file:.s=.o))
+endif
 
 ULTRA_O_FILES := $(foreach file,$(ULTRA_S_FILES),$(BUILD_DIR)/$(file:.s=.o)) \
                  $(foreach file,$(ULTRA_C_FILES),$(BUILD_DIR)/$(file:.c=.o))
@@ -470,8 +473,8 @@ endif
 ifeq ($(TARGET_NDS),1)
 
 LIBDIRS := $(DEVKITPRO)/libnds
-TARGET_CFLAGS := -march=armv5te -mtune=arm946e-s $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM9 -D_LANGUAGE_C -DNO_SEGMENTED_MEMORY #-DENABLE_FPS
-ARM7_TARGET_CFLAGS := -mcpu=arm7tdmi -mtune=arm7tdmi $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM7
+TARGET_CFLAGS := -march=armv5te -mtune=arm946e-s -Wno-error=incompatible-pointer-types -Wno-error=implicit-function-declaration -Wno-error=int-conversion $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM9 -D_LANGUAGE_C -DNO_SEGMENTED_MEMORY #-DENABLE_FPS
+ARM7_TARGET_CFLAGS := -mcpu=arm7tdmi -mtune=arm7tdmi $(foreach dir,$(LIBDIRS),-I$(dir)/include) -DTARGET_NDS -DARM7 -D_LANGUAGE_C
 
 CC_CHECK := $(CC)
 CC_CHECK_CFLAGS := -fsyntax-only -fsigned-char $(CC_CFLAGS) $(TARGET_CFLAGS) -Wall -Wextra -Wno-format-security -DNON_MATCHING -DAVOID_UB $(DEF_INC_CFLAGS)
@@ -857,7 +860,7 @@ endif
 ifeq ($(TARGET_NDS),1)
 $(BUILD_DIR)/arm7/%.o: %.c
 	$(call print,Compiling:,$<,$@)
-	@$(CC_CHECK) $(ARM7_CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/arm7/$*.d $<
+	$(V)$(CC_CHECK) $(ARM7_CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/arm7/$*.d $<
 	$(V)$(CC) -c $(ARM7_CFLAGS) -o $@ $<
 
 $(BUILD_DIR)/gfx/%.s: %.png %.grit
@@ -1006,8 +1009,6 @@ $(BUILD_DIR)/src/audio/%.copt: $(BUILD_DIR)/src/audio/%.acpp
 	$(COPT) -signed -I=$< -CMP=$@ -cp=i -scalaroptimize=1 $(COPTFLAGS)
 $(BUILD_DIR)/src/audio/seqplayer.copt: COPTFLAGS := -inline_manual
 
-endif
-
 # Assemble assembly code
 $(BUILD_DIR)/%.o: %.s
 	$(call print,Assembling:,$<,$@)
@@ -1017,6 +1018,8 @@ $(BUILD_DIR)/%.o: %.s
 $(BUILD_DIR)/rsp/%.bin $(BUILD_DIR)/rsp/%_data.bin: rsp/%.s
 	$(call print,Assembling:,$<,$@)
 	$(V)$(RSPASM) -sym $@.sym $(RSPASMFLAGS) -strequ CODE_FILE $(BUILD_DIR)/rsp/$*.bin -strequ DATA_FILE $(BUILD_DIR)/rsp/$*_data.bin $<
+
+endif
 
 # Build NDS ROM
 ifeq ($(TARGET_NDS),1)
