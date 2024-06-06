@@ -86,6 +86,12 @@ DTCM_BSS static int frame_count;
 DTCM_BSS static Vtx_t *vertex_batch[BATCH_SIZE];
 DTCM_BSS static uint8_t batch_count;
 
+// SM64 code needs these, but we're not actually including the fast3d microcode bins
+u64 rspF3DStart[] = {};
+u64 rspF3DBootStart[] = {};
+u64 rspF3DBootEnd[] = {};
+u64 rspF3DDataStart[] = {};
+
 struct Sprite sprites[MAX_SPRITES];
 
 struct {
