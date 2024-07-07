@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
     
     steps:
     - name: Checkout
@@ -14,11 +13,11 @@ jobs:
     - name: Install Tools
       run: |
         sudo apt-get update
-        sudo apt install -y build-essential git python sox
         wget https://apt.devkitpro.org/install-devkitpro-pacman
         chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
-        sudo dkp-pacman -S <nds-dev>
+        sudo dkp-pacman -S nds-dev
+        sudo apt install -y build-essential git python sox
     - name: Compile
       run: |
        make -j$(nproc)
