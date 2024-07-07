@@ -12,13 +12,14 @@ jobs:
       uses: actions/checkout@v4
     - name: Install DevkitPro Pacman
       run: |
+        sudo apt-get update
+        sudo apt-get install -y wget
         wget https://apt.devkitpro.org/install-devkitpro-pacman
         sudo chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
         sudo dkp-pacman -S nds-dev --noconfirm
     - name: Install Tools
       run: |
-        sudo apt-get update
         sudo apt install -y build-essential git python sox
     - name: Compile
       run: |
