@@ -21,4 +21,4 @@ jobs:
       with:
         name: sm64
         path: |
-          .
+          ./build/us_nds/*.nds
