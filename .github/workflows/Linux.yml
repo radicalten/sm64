@@ -15,6 +15,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt install -y build-essential git python sox
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x ./install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
     - name: Compile
       run: |
        make -j$(nproc)
