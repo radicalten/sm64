@@ -16,6 +16,10 @@ jobs:
         sudo chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
         sudo dkp-pacman -S nds-dev --noconfirm
+    - name: Install Tools
+      run: |
+        sudo apt-get update
+        sudo apt install -y build-essential git python sox
     - name: Compile
       run: |
        make -j$(nproc)
