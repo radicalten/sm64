@@ -18,7 +18,7 @@ jobs:
         sudo dkp-pacman -S nds-dev --noconfirm
     - name: Install Tools
       run: |
-        sudo apt install -y build-essential git python sox
+        sudo apt install -y build-essential sox
     - name: Compile
       run: |
        make -j$(nproc)
