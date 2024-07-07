@@ -16,7 +16,7 @@ jobs:
         sudo chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
         sudo dkp-pacman -S nds-dev 
-        printf '\n'
+        printf 'all'
         printf 'Y'
     - name: Install Tools
       run: |
