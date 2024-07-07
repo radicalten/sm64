@@ -13,7 +13,6 @@ jobs:
     - name: Install DevkitPro Pacman
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget
         wget https://apt.devkitpro.org/install-devkitpro-pacman
         sudo chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
