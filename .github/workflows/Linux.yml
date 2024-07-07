@@ -9,13 +9,12 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Install Docker
+    - name: Install Tools
       run: |
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sh get-docker.sh
+        sudo apt install -y build-essential git python sox
     - name: Compile
       run: |
-        chmod +x build_docker.sh && ./build_docker.sh
+        make -j$(nproc)
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
