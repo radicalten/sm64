@@ -19,7 +19,7 @@ jobs:
     - name: Install Tools
       run: |
         sudo apt-get update
-        sudo apt install -y build-essential sox
+        sudo apt install -y sox
     - name: Compile
       run: |
        make -j$(nproc)
