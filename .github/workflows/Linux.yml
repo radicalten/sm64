@@ -15,7 +15,7 @@ jobs:
         wget https://apt.devkitpro.org/install-devkitpro-pacman
         sudo chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
-        sudo dkp-pacman -S nds-dev
+        sudo dkp-pacman -y -S nds-dev
     - name: Install Tools
       run: |
         sudo apt-get update
