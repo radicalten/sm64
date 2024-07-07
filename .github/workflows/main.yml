@@ -9,13 +9,10 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Install Grrlib
+    - name: Install Docker
       run: |
-         git clone https://github.com/GRRLIB/GRRLIB.git
-         cd GRRLIB/GRRLIB/
-         make clean
-         make all
-         make install
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
     - name: Compile
       run: |
         make -f Makefile.wiiogc -j$(nproc)
